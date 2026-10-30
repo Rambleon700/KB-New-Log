@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AM / PM 5-Day Workout Tracker</title>
+    <style>
+        :root {
+            --bg-color: #121214;
+            --card-bg: #1a1a1e;
+            --text-main: #f0f0f5;
+            --text-muted: #a0a0aa;
+            --am-color: #ff9f43;
+            --pm-color: #54a0ff;
+            --accent-green: #10b981;
+            --accent-red: #ef4444;
+            --border-color: #2a2a32;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 20px;
+            line-height: 1.5;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            margin: 0 0 10px 0;
+            font-size: 2.5rem;
+            letter-spacing: -0.5px;
+        }
+
+        .subtitle {
+            color: var(--text-muted);
+            margin: 0;
+        }
+
+        /* Dashboard controls and utilities */
+        .dashboard-tools {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        @media (max-width: 768px) {
+            .dashboard-tools {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .tool-card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+        }
+
+        .tool-card h3 {
+            margin: 0 0 15px 0;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .timer-display {
+            font-size: 2.5rem;
+            font-weight: 700;
+            font-family: monospace;
+            text-align: center;
+            margin-bottom: 15px;
+            background: #09090b;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-bottom: 10px;
+        }
+
+        button, .file-label {
+            background-color: #2a2a32;
+            color: var(--text-main);
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: background 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        button:hover, .file-label:hover {
+            background-color: #3f3f46;
+        }
+
+        button.btn-success { background-color: var(--accent-green); color: #fff; }
+        button.btn-success:hover { background-color: #059669; }
+        button.btn-danger { background-color: var(--accent-red); color: #fff; }
+        button.btn-danger:hover { background-color: #dc2626; }
+        
+        .preset-group {
+            display: flex;
+            justify-content: center;
+            gap: 6px;
+            margin-top: 10px;
+        }
+        
+        .btn-preset {
+            font-size: 0.8rem;
+            padding: 4px 10px;
+            background-color: #1f1f23;
+            border: 1px solid var(--border-color);
+        }
+
+        /* Storage Actions */
+        .storage-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            justify-content: center;
+            height: calc(100% - 35px);
+        }
+
+        .storage-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .status-badge {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            text-align: center;
+            margin-top: 5px;
+            font-style: italic;
+        }
+
+        /* Layout Architecture */
+        .split-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+        }
+
+        @media (max-width: 900px) {
+            .split-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .session-block {
+            border-radius: 16px;
+            padding: 5px;
+        }
+
+        .session-block.am { border-top: 4px solid var(--am-color); }
+        .session-block.pm { border-top: 4px solid var(--pm-color); }
+
+        .session-title {
+            font-size: 1.5rem;
+            margin: 15px 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .session-title.am { color: var(--am-color); }
+        .session-title.pm { color: var(--pm-color); }
+
+        .day-card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 20px;
+        }
+
+        .day-title {
+            font-size: 1.15rem;
+            font-weight: 700;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 8px;
+            margin-bottom: 12px;
+            color: #fff;
+        }
+
+        .exercise-item {
+            padding: 10px 0;
+            border-bottom: 1px solid #222226;
+        }
+
+        .exercise-item:last-child {
+            border-bottom: none;
+        }
+
+        .exercise-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+        }
+
+        .checkbox-container {
+            margin-top: 3px;
+        }
+
+        .checkbox-container input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--accent-green);
+            cursor: pointer;
+        }
+
+        .exercise-details {
+            flex-grow: 1;
+        }
+
+        .exercise-name {
+            font-weight: 600;
+            font-size: 1rem;
+            margin: 0;
+        }
+
+        .exercise-meta {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin: 2px 0 6px 0;
+        }
+
+        .weight-tag {
+            background-color: #27272a;
+            color: #e4e4e7;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 0.8rem;
+        }
+
+        /* Tracking inputs */
+        .logging-area {
+            display: flex;
+            gap: 8px;
+            margin-top: 6px;
+        }
+
+        .log-input {
+            background-color: #09090b;
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            flex-grow: 1;
+        }
+
+        .log-input:focus {
+            outline: 1px solid var(--text-muted);
+        }
+
+        .log-preview {
+            font-size: 0.85rem;
+            color: var(--accent-green);
+            margin: 4px 0 0 0;
+            min-height: 18px;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>5-Day AM / PM Split</h1>
+        <p class="subtitle">30-Min Morning Mobility &bull; 30-Min Afternoon Strength</p>
+    </header>
+
+    <!-- Dashboard Tools Section -->
+    <div class="dashboard-tools">
+        <!-- Unified Timers Card -->
+        <div class="tool-card">
+            <h3>⏱️ Training Timers</h3>
+            <div id="timerDisplay" class="timer-display">00:00</div>
+            <div class="btn-group">
+                <button id="startBtn" class="btn-success">Start</button>
+                <button id="stopBtn">Stop</button>
+                <button id="resetBtn">Reset</button>
+                <button id="toggleTimerMode">Switch to Stopwatch</button>
+            </div>
+            <div id="presetContainer" class="preset-group">
+                <button class="btn-preset" onclick="setCountdown(45)">45s (AM)</button>
+                <button class="btn-preset" onclick="setCountdown(60)">60s (AM)</button>
+                <button class="btn-preset" onclick="setCountdown(90)">90s (PM)</button>
+                <button class="btn-preset" onclick="setCountdown(120)">120s (PM)</button>
+            </div>
+        </div>
+
+        <!-- Storage & System Control Card -->
+        <div class="tool-card">
+            <h3>💾 Profile Data Security</h3>
+            <div class="storage-actions">
+                <div class="storage-row">
+                    <button onclick="exportJSON()" style="flex: 1;">📤 Export Data (.json)</button>
+                    <label class="file-label" style="flex: 1; text-align: center;">
+                        📥 Import Backup
+                        <input type="file" id="importFile" accept=".json" onchange="importJSON(event)">
+                    </label>
+                </div>
+                <div style="border-top: 1px solid var(--border-color); margin: 5px 0;"></div>
+                <button onclick="resetAllSessionData()" class="btn-danger">🧹 Reset All Weekly Session Data</button>
+                <div id="storageStatus" class="status-badge">Loaded from browser local cache</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Workout Architecture Layout -->
+    <div class="split-container">
+        
+        <!-- Morning Schedule -->
+        <div class="session-block am">
+            <h2 class="session-title am">☀️ Morning (AM) &bull; Conditioning</h2>
+            
+            <!-- Days 1, 3, 5 -->
+            <div class="day-card">
+                <div class="day-title">Days 1, 3, & 5 (Upper Pace — Rest: 45-60s)</div>
+                
+                <div class="exercise-item">
+                    <div class="exercise-row">
+                        <div class="checkbox-container"><input type="checkbox" id="check-am-1-1" onchange="syncData()"></div>
+                        <div class="exercise-details">
+                            <p class="exercise-name">Halo-to-Hip Flow</p>
+                            <p class="exercise-meta">5 sets &times; 15 reps &bull; <span class="weight-tag">14 kg KB</span></p>
+                            <div class="logging-area">
+                                <input type="text" id="log-am-1-1" class="log-input" placeholder="Notes / weight adjustment..." oninput="syncData()">
+                            </div>
+                            <p id="preview-am-1-1" class="log-preview"></p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="exercise-item">
+                    <div class="exercise-row">
+                        <div class="checkbox-container"><input type="checkbox" id="check-am-1-2" onchange="syncData()"></div>
+                        <div class="exercise-details">
+                            <p class="exercise-name">Farmers Carry</p>
+                            <p class="exercise-meta">4 sets &times; 45-second carries &bull; <span class="weight-tag">25 kg DBs &times; 2</span></p>
+                            <div class="logging-area">
+                                <input type="text" id="log-am-1-2" class="log-input" placeholder="Notes / weight adjustment..." oninput="syncData()">
+                            </div>
+                            <p id="preview-am-1-2" class="log-preview"></p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="exercise-item">
+                    <div class="exercise-row">
+                        <div class="checkbox-container"><input type="checkbox" id="check-am-1-3" onchange="syncData()"></div>
+                        <div class="exercise-details">
+                            <p class="exercise-name">Bicep Curls</p>
+                            <p class="exercise-meta">3 sets &times; 10-12 reps &bull; <span class="weight-tag">8 kg KBs &times; 2</span> or <span class="weight-tag">10 kg DBs</span></p>
+                            <div class="logging-area">
+                                <input type="text" id="log-am-1-3" class="log-input" placeholder="Notes / weight adjustment..." oninput="syncData()">
+                            </div>
+                            <p id="preview-am-1-3" class="log-preview"></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Days 2, 4 -->
+            <div class="day-card">
+                <div class="day-title">Days 2 & 4 (Lower & Core — Rest: 45-60s)</div>
+                
+                <div class="exercise-item">
+                    <div class="exercise-row">
+                        <div class="checkbox-container"><input type="checkbox" id="check-am-2-1" onchange="syncData()"></div>
+                        <div class="exercise-details">
+                            <p class="exercise-name">Halo-to-Hip Flow</p>
+                            <p class="exercise-meta">5 sets &times; 15 reps &bull; <span class="weight-tag">14 kg KB</span></p>
+                            <div class="logging-area">
+                                <input type="text" id="log-am-2-1" class="log-input" placeholder="Notes / weight adjustment..." oninput="syncData()">
+                            </div>
+                            <p id="preview-am-2-1" class="log-preview"></p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="exercise-item">
+                    <div class="exercise-row">
+                        <div class="checkbox-container"><input type="checkbox" id="check-am-2-2" onchange="syncData()"></div>
+                        <div class="exercise-details">
+                            <p class="exercise-name">Sword Chops</p>
+                            <p class="exercise-meta">4 sets &times; 10 reps per side &bull; <span class="weight-tag">12 kg KB</span></p>
+                            <div class="logging-area">
+                                <input type="text" id="log-am-2-2" class="log-input" placeholder="Notes / weight adjustment..." oninput="syncData()">
+                            </div>
+                            <p id="preview-am-2-2" class="log-preview"></p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="exercise-item">
+                    <div class="exercise-row">
+                        <div class="checkbox-container"><input type="checkbox" id="check-am-2-3" onchange="syncData()"></div>
+                        <div class="exercise-details">
+                            <p class="exercise-name">Tricep Extensions</p>
+                            <p class="exercise-meta">3 sets &times; 12 reps &bull; <span class="weight-tag">10 kg - 12.5 kg DBs</span></p>
+                            <div class="logging-area">
+                                <input type="text" id="log-am-2-3" class="log-input" placeholder="Notes / weight adjustment..." oninput="syncData()">
+                            </div>
+                            <p id="preview-am-2-3" class="log-preview"></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Afternoon Schedule -->
+        <div class="session-block pm">
+            <h2 class="session-title pm">🌙 Afternoon (PM) &bull; Heavy Strength</h2>
+            
+            <!-- Days 1 & 3 -->
+            <div class="day-card">
+                <div class="day-title">Days 1 & 3 (Upper Strength — Rest: 90-120s)</div>
+                
+                <div class="exercise-item">
+                    <div class="exercise-row">
+                        <div class="checkbox-container"><input type="checkbox" id="check-pm-1-1" onchange="syncData()"></div>
+                        <div class="exercise-details">
+                            <p class="exercise-name">Incline Dumbbell Bench Press</p>
+                            <p class="exercise-meta">4 sets &times; 8-10 reps &bull; <span class="weight-tag">19 kg DBs &times; 2</span></p>
+                            <div class="logging-area">
+                                <input type="text" id="log-pm-1-1" class="log-input" placeholder="Notes / weight adjustment..." oninput="syncData()">
+                            </div>
+                            <p id="preview-pm-1-1" class="log-preview"></p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="exercise-item">
+                    <div class="exercise-row">
+                        <div class="checkbox-container"><input type="checkbox" id="check-pm-1-2" onchange="syncData()"></div>
+                        <div class="exercise-details">
+                            <p class="exercise-name">Bench-Supported Lat Rows</p>
+                            <p class="exercise-meta">4 sets &times; 10 reps per arm &bull; <span class="weight-tag">18 kg KB</span></p>
+                            <div class="logging-area">
+                                <input type="text" id="log-pm-1-2" class="log-input" placeholder="Notes / weight adjustment..." oninput="syncData()">
+                            </div>
+                            <p id="preview-pm-1-2" class="log-preview"></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Days 2 & 4 -->
+            <div class="day-card">
+                <div class="day-title">Days 2 & 4 (Lower Strength — Rest: 90-120s)</div>
+                
+                <div class="exercise-item">
+                    <div class="exercise-row">
+                        <div class="checkbox-container"><input type="checkbox" id="check-pm-2-1" onchange="syncData()"></div>
+                        <div class="exercise-details">
+                            <p class="exercise-name">Dumbbell Deadlifts</p>
+                            <p class="exercise-meta">4 sets &times; 8-10 reps &bull; <span class="weight-tag">25 kg DBs &times; 2</span></p>
+                            <div class="logging-area">
+                                <input type="text" id="log-pm-2-1" class="log-input" placeholder="Notes / weight adjustment..." oninput="syncData()">
+                            </div>
+                            <p id="preview-pm-2-1" class="log-preview"></p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="exercise-item">
+                    <div class="exercise-row">
+                        <div class="checkbox-container"><input type="checkbox" id="check-pm-2-2" onchange="syncData()"></div>
+                        <div class="exercise-details">
+                            <p class="exercise-name">Optional Leg Expansion (Squat Variation)</p>
+                            <p class="exercise-meta">3 sets &times; 12 reps &bull; <span class="weight-tag">14 kg</span> or <span class="weight-tag">18 kg KB</span></p>
+                            <div class="logging-area">
+                                <input type="text" id="log-pm-2-2" class="log-input" placeholder="Notes / weight adjustment..." oninput="syncData()">
+                            </div>
+                            <p id="preview-pm-2-2" class="log-preview"></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Day 5 -->
+            <div class="day-card">
+                <div class="day-title">Day 5 (Friday Finisher — Rest: 90-120s)</div>
+                
+                <div class="exercise-item">
+                    <div class="exercise-row">
+                        <div class="checkbox-container"><input type="checkbox" id="check-pm-3-1" onchange="syncData()"></div>
+                        <div class="exercise-details">
+                            <p class="exercise-name">Incline Dumbbell Bench Press</p>
+                            <p class="exercise-meta">3 sets &times; 8-10 reps &bull; <span class="weight-tag">19 kg DBs &times; 2</span></p>
+                            <div class="logging-area">
+                                <input type="text" id="log-pm-3-1" class="log-input" placeholder="Notes / weight adjustment..." oninput="syncData()">
+                            </div>
+                            <p id="preview-pm-3-1" class="log-preview"></p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="exercise-item">
+                    <div class="exercise-row">
+                        <div class="checkbox-container"><input type="checkbox" id="check-pm-3-2" onchange="syncData()"></div>
+                        <div class="exercise-details">
+                            <p class="exercise-name">Bench-Supported Lat Rows</p>
+                            <p class="exercise-meta">3 sets &times; 10 reps per arm &bull; <span class="weight-tag">18 kg KB</span></p>
+                            <div class="logging-area">
+                                <input type="text" id="log-pm-3-2" class="log-input" placeholder="Notes / weight adjustment..." oninput="syncData()">
+                            </div>
+                            <p id="preview-pm-3-2" class="log-preview"></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+    // System Variables
+    let isStopwatch = false;
+    let timerInterval = null;
+    let timeRemaining = 0; // Countdown seconds
+    let stopwatchTime = 0; // Stopwatch milliseconds counter
+    let lastActivePreset = 60;
+
+    const timerDisplay = document.getElementById('timerDisplay');
+    const startBtn = document.getElementById('startBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const toggleTimerMode = document.getElementById('toggleTimerMode');
+    const presetContainer = document.getElementById('presetContainer');
+    const statusBadge = document.getElementById('storageStatus');
+
+    // --- Timer Engine Layout ---
+    function updateDisplay() {
+        if (isStopwatch) {
+            let totalSeconds = Math.floor(stopwatchTime / 1000);
+            let mins = Math.floor(totalSeconds / 60);
+            let secs = totalSeconds % 60;
+            let ms = Math.floor((stopwatchTime % 1000) / 100);
+            timerDisplay.textContent = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}.${ms}`;
+        } else {
+            let mins = Math.floor(timeRemaining / 60);
+            let secs = timeRemaining % 60;
+            timerDisplay.textContent = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+    }
+
+    function startTimer() {
+        if (timerInterval) return;
+        
+        let startTime = Date.now();
+        
+        timerInterval = setInterval(() => {
+            if (isStopwatch) {
+                stopwatchTime += 100;
+                updateDisplay();
+            } else {
+                if (timeRemaining > 0) {
+                    timeRemaining--;
+                    updateDisplay();
+                    if (timeRemaining === 0) {
+                        clearInterval(timerInterval);
+                        timerInterval = null;
+                        alert("Interval complete! Time to start your next set.");
+                    }
+                } else {
+                    clearInterval(timerInterval);
+                    timerInterval = null;
+                }
+            }
+        }, isStopwatch ? 100 : 1000);
+    }
+
+    function stopTimer() {
+        clearInterval(timerInterval);
+        timerInterval = null;
+    }
+
+    function resetTimer() {
+        stopTimer();
+        if (isStopwatch) {
+            stopwatchTime = 0;
+        } else {
+            timeRemaining = lastActivePreset;
+        }
+        updateDisplay();
+    }
+
+    function setCountdown(seconds) {
+        if (isStopwatch) return;
+        stopTimer();
+        lastActivePreset = seconds;
+        timeRemaining = seconds;
+        updateDisplay();
+    }
+
+    toggleTimerMode.addEventListener('click', () => {
+        stopTimer();
+        isStopwatch = !isStopwatch;
+        if (isStopwatch) {
+            toggleTimerMode.textContent = "Switch to Rest Timer";
+            presetContainer.style.display = "none";
+            stopwatchTime = 0;
+        } else {
+            toggleTimerMode.textContent = "Switch to Stopwatch";
+            presetContainer.style.display = "flex";
+            timeRemaining = lastActivePreset;
+        }
+        updateDisplay();
+    });
+
+    startBtn.addEventListener('click', startTimer);
+    stopBtn.addEventListener('click', stopTimer);
+    resetBtn.addEventListener('click', resetTimer);
+
+    // --- State Storage Engine ---
+    const elementIds = [
+        'am-1-1', 'am-1-2', 'am-1-3',
+        'am-2-1', 'am-2-2', 'am-2-3',
+        'pm-1-1', 'pm-1-2',
+        'pm-2-1', 'pm-2-2',
+        'pm-3-1', 'pm-3-2'
+    ];
+
+    function syncData() {
+        let workoutData = {
+            checkboxes: {},
+            logs: {}
+        };
+
+        elementIds.forEach(id => {
+            const cb = document.getElementById(`check-${id}`);
+            const logInput = document.getElementById(`log-${id}`);
+            const preview = document.getElementById(`preview-${id}`);
+
+            workoutData.checkboxes[id] = cb.checked;
+            workoutData.logs[id] = logInput.value;
+
+            if (logInput.value.trim() !== "") {
+                preview.textContent = `📝 Logged: ${logInput.value}`;
+            } else {
+                preview.textContent = "";
+            }
+        });
+
+        localStorage.setItem('ampm_workout_state_v5', JSON.stringify(workoutData));
+        const now = new Date();
+        statusBadge.textContent = `Saved locally at ${now.toLocaleTimeString()}`;
+    }
+
+    function loadCachedData() {
+        const saved = localStorage.getItem('ampm_workout_state_v5');
+        if (!saved) {
+            updateDisplay();
+            return;
+        }
+
+        try {
+            const workoutData = JSON.stringify(JSON.parse(saved)); // Safety pass
+            applyStateToDOM(JSON.parse(workoutData));
+            statusBadge.textContent = "Loaded from browser local cache";
+        } catch (e) {
+            console.error("Local data verification failed", e);
+        }
+        updateDisplay();
+    }
+
+    function applyStateToDOM(data) {
+        if (!data) return;
+        elementIds.forEach(id => {
+            if (data.checkboxes && data.checkboxes[id] !== undefined) {
+                document.getElementById(`check-${id}`).checked = data.checkboxes[id];
+            }
+            if (data.logs && data.logs[id] !== undefined) {
+                const logInput = document.getElementById(`log-${id}`);
+                logInput.value = data.logs[id];
+                const preview = document.getElementById(`preview-${id}`);
+                if (logInput.value.trim() !== "") {
+                    preview.textContent = `📝 Logged: ${logInput.value}`;
+                } else {
+                    preview.textContent = "";
+                }
+            }
+        });
+    }
+
+    // --- JSON Transfer Mechanics ---
+    function exportJSON() {
+        const saved = localStorage.getItem('ampm_workout_state_v5');
+        if (!saved) {
+            alert("No saved tracking info found to export.");
+            return;
+        }
+
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(saved);
+        const downloadAnchor = document.createElement('a');
+        downloadAnchor.setAttribute("href", dataStr);
+        downloadAnchor.setAttribute("download", "ampm_workout_backup.json");
+        document.body.appendChild(downloadAnchor);
+        downloadAnchor.click();
+        downloadAnchor.remove();
+    }
+
+    function importJSON(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const parsed = JSON.parse(e.target.result);
+                if (parsed.checkboxes || parsed.logs) {
+                    localStorage.setItem('ampm_workout_state_v5', JSON.stringify(parsed));
+                    applyStateToDOM(parsed);
+                    statusBadge.textContent = "Backup profile imported successfully!";
+                } else {
+                    alert("Invalid profile structure detected.");
+                }
+            } catch (err) {
+                alert("Failed to parse file. Make sure it is a valid JSON backup export.");
+            }
+        };
+        reader.readAsText(file);
+    }
+
+    // --- Core Master Reset Execution ---
+    function resetAllSessionData() {
+        const verification = confirm("Are you sure you want to clear your current progress check marks and text logs? This clears out all input cells for a fresh tracking week.");
+        if (!verification) return;
+
+        // Purge memory registry
+        localStorage.removeItem('ampm_workout_state_v5');
+
+        // Restore components to zero defaults
+        elementIds.forEach(id => {
+            document.getElementById(`check-${id}`).checked = false;
+            document.getElementById(`log-${id}`).value = "";
+            document.getElementById(`preview-${id}`).textContent = "";
+        });
+
+        // Reset timer configurations
+        stopTimer();
+        stopwatchTime = 0;
+        timeRemaining = lastActivePreset;
+        updateDisplay();
+
+        statusBadge.textContent = "Session logs purged. Dashboard reset complete.";
+    }
+
+    // Run on startup
+    window.onload = loadCachedData;
+</script>
+
+</body>
+</html>
